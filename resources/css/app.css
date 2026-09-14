@@ -1,0 +1,113 @@
+@import url('https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    [x-cloak] { display: none !important; }
+    html { scroll-behavior: smooth; }
+    body {
+        @apply bg-ink-100 text-ink-800 antialiased;
+        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+        overflow-x: clip;
+    }
+    h1, h2, h3, h4 {
+        @apply text-ink-900 tracking-tight;
+    }
+}
+
+@layer components {
+    /* Cards */
+    .card {
+        @apply rounded-xl border border-ink-200 bg-white shadow-card;
+    }
+    .card-pad {
+        @apply p-5 sm:p-6;
+    }
+
+    /* Buttons */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold
+               transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+               focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+    .btn-primary {
+        @apply bg-brand-700 text-white hover:bg-brand-800;
+    }
+    .btn-secondary {
+        @apply border border-ink-300 bg-white text-ink-700 hover:bg-ink-50;
+    }
+    .btn-ghost {
+        @apply text-ink-600 hover:bg-ink-100;
+    }
+    .btn-danger {
+        @apply bg-rose-600 text-white hover:bg-rose-700;
+    }
+    .btn-success {
+        @apply bg-emerald-600 text-white hover:bg-emerald-700;
+    }
+    .btn-warning {
+        @apply bg-amber-500 text-white hover:bg-amber-600;
+    }
+    .btn-xs {
+        @apply px-2.5 py-1 text-xs;
+    }
+    .btn-sm {
+        @apply px-3 py-1.5 text-xs;
+    }
+
+    /* Form controls */
+    .field-label {
+        @apply mb-1 block text-xs font-medium uppercase tracking-wide text-ink-500;
+    }
+    .input,
+    .select,
+    .textarea {
+        @apply w-full rounded-lg border-ink-300 text-sm text-ink-900 shadow-sm
+               placeholder:text-ink-400 focus:border-brand-500 focus:ring-brand-500;
+    }
+    .input-sm {
+        @apply rounded-md py-1 text-xs;
+    }
+
+    /* Badges */
+    .badge {
+        @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset;
+    }
+    .badge-gray   { @apply bg-ink-100 text-ink-700 ring-ink-200; }
+    .badge-brand  { @apply bg-brand-50 text-brand-700 ring-brand-200; }
+    .badge-blue   { @apply bg-sky-50 text-sky-700 ring-sky-200; }
+    .badge-green  { @apply bg-emerald-50 text-emerald-700 ring-emerald-200; }
+    .badge-amber  { @apply bg-amber-50 text-amber-700 ring-amber-200; }
+    .badge-red    { @apply bg-rose-50 text-rose-700 ring-rose-200; }
+    .badge-violet { @apply bg-violet-50 text-violet-700 ring-violet-200; }
+
+    /* Segmented Sí/No/N/A control */
+    .seg {
+        @apply inline-flex overflow-hidden rounded-lg border border-ink-300 bg-white;
+    }
+    .seg > button {
+        @apply px-3 py-1.5 text-xs font-semibold text-ink-600 transition-colors hover:bg-ink-50;
+    }
+    .seg > button + button {
+        @apply border-l border-ink-300;
+    }
+    .seg > button[data-active="si"]  { @apply bg-emerald-600 text-white hover:bg-emerald-600; }
+    .seg > button[data-active="no"]  { @apply bg-ink-600 text-white hover:bg-ink-600; }
+    .seg > button[data-active="na"]  { @apply bg-ink-400 text-white hover:bg-ink-400; }
+
+    /* Section heading with numbered chip */
+    .section-num {
+        @apply flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-700 text-sm font-bold text-white;
+    }
+
+    /* Data table */
+    .table-wrap { @apply overflow-x-auto rounded-lg border border-ink-200; }
+    .dtable { @apply min-w-full divide-y divide-ink-200 text-sm; }
+    .dtable thead th {
+        @apply whitespace-nowrap bg-ink-50 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-ink-500;
+    }
+    .dtable tbody tr { @apply border-b border-ink-100 last:border-0; }
+    .dtable tbody td { @apply px-3 py-2.5 align-top text-ink-700; }
+}
