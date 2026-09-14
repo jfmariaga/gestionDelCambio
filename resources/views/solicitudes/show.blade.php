@@ -107,7 +107,7 @@
                     'Área / Proceso' => $solicitud->area_proceso,
                     'Tipo de cambio' => $solicitud->tipo_cambio,
                     'Fecha requerida' => optional($solicitud->fecha_requerida)->format('d/m/Y'),
-                    'Costo estimado' => $solicitud->costo_estimado ? \Illuminate\Support\Number::currency((float) $solicitud->costo_estimado, in: 'COP', locale: 'es_CO', precision: 0) : null,
+                    'Costo estimado' => $solicitud->costo_estimado ? \Illuminate\Support\Number::currency(round((float) $solicitud->costo_estimado), in: 'COP', locale: 'es_CO') : null,
                     '¿Requiere comité?' => $solicitud->requiere_comite ? 'Sí' : 'No',
                 ] as $k => $v)
                     <div>

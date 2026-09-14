@@ -7,7 +7,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 ## Foundational Context
 
-This application is a Laravel application running on PHP 8.2. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
+This application is a Laravel application running on PHP 8.1. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
@@ -144,27 +144,25 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
 
-=== laravel/v12 rules ===
+=== laravel/v10 rules ===
 
-# Laravel 12
+# Laravel 10
 
 - CRITICAL: ALWAYS use `search-docs` tool for version-specific Laravel documentation and updated code examples.
-- Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
+- This project uses Laravel 10's classic application structure (not the Laravel 11+ streamlined layout).
 
-## Laravel 12 Structure
+## Laravel 10 Structure
 
-- In Laravel 12, middleware are no longer registered in `app/Http/Kernel.php`.
-- Middleware are configured declaratively in `bootstrap/app.php` using `Application::configure()->withMiddleware()`.
-- `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
-- `bootstrap/providers.php` contains application specific service providers.
-- The `app/Console/Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
-- Console commands in `app/Console/Commands/` are automatically available and do not require manual registration.
+- Middleware are registered in `app/Http/Kernel.php` (`$middleware`, `$middlewareGroups`, `$middlewareAliases`).
+- `bootstrap/app.php` builds the `Application` instance directly and binds the HTTP/Console kernels and exception handler via `$app->singleton(...)`.
+- Service providers are listed in `config/app.php`'s `providers` array (including `App\Providers\RouteServiceProvider`, which registers `routes/web.php`).
+- `app/Console/Kernel.php` defines the schedule and loads `app/Console/Commands` plus `routes/console.php`.
+- `app/Exceptions/Handler.php` handles exception rendering/reporting.
 
 ## Database
 
 - When modifying a column, the migration must include all of the attributes that were previously defined on the column. Otherwise, they will be dropped and lost.
-
-- Laravel 12 allows limiting eagerly loaded records natively, without external packages: `$query->latest()->limit(10);`.
+- Changing an existing column (`->change()`) requires the `doctrine/dbal` package, which is installed for this reason.
 
 ### Models
 

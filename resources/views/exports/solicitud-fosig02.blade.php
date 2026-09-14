@@ -32,7 +32,7 @@
         <tr><th>Fecha</th><td>{{ $solicitud->fecha?->format('Y-m-d') }}</td><th>Nombre del cambio</th><td>{{ $solicitud->nombre_cambio }}</td></tr>
         <tr><th>Solicitante / cargo</th><td>{{ $solicitud->solicitante_cargo }}</td><th>Área / Proceso</th><td>{{ $solicitud->area_proceso }}</td></tr>
         <tr><th>Tipo de cambio</th><td>{{ $solicitud->tipo_cambio }}</td><th>Fecha requerida</th><td>{{ optional($solicitud->fecha_requerida)->format('Y-m-d') }}</td></tr>
-        <tr><th>Costo estimado</th><td>{{ $solicitud->costo_estimado ? \Illuminate\Support\Number::currency((float) $solicitud->costo_estimado, in: 'COP', locale: 'es_CO', precision: 0) : '' }}</td><th>¿Requiere comité?</th><td>{{ $solicitud->requiere_comite ? 'Sí' : 'No' }}</td></tr>
+        <tr><th>Costo estimado</th><td>{{ $solicitud->costo_estimado ? \Illuminate\Support\Number::currency(round((float) $solicitud->costo_estimado), in: 'COP', locale: 'es_CO') : '' }}</td><th>¿Requiere comité?</th><td>{{ $solicitud->requiere_comite ? 'Sí' : 'No' }}</td></tr>
         <tr><th>Clasificación</th><td colspan="3">{{ $solicitud->evaluacion?->clasificacion?->value ?? $solicitud->clasificacion_manual ?? '—' }}</td></tr>
     </table>
 

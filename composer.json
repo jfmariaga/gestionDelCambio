@@ -6,24 +6,23 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.1",
         "barryvdh/laravel-dompdf": "^3.1",
-        "laravel/framework": "^12.0",
+        "doctrine/dbal": "^3.7",
+        "laravel/framework": "^10.28",
         "laravel/socialite": "^5.31",
         "laravel/tinker": "^3.0",
-        "livewire/livewire": "^4.4",
+        "livewire/livewire": "^3.5",
         "socialiteproviders/microsoft-azure": "^5.2",
         "spatie/laravel-permission": "^6.16"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "laravel/boost": "^2.8",
-        "laravel/breeze": "^2.4",
-        "laravel/pail": "^1.2.5",
-        "laravel/pint": "^1.27",
+        "laravel/boost": "^1.8",
+        "laravel/pint": "^1.20",
         "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^11.5.3"
+        "nunomaduro/collision": "^7.10",
+        "phpunit/phpunit": "^10.5"
     },
     "autoload": {
         "psr-4": {
@@ -48,7 +47,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "@php artisan dev"
+            "npx concurrently -c \"#93c5fd,#c4b5fd\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" --names=server,queue --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
@@ -85,6 +84,17 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "ignore": [
+                "PKSA-m5cs-t1y6-qpcs",
+                "PKSA-3r5d-mb8f-1qw9",
+                "PKSA-mdq4-51ck-6kdq",
+                "PKSA-8qx3-n5y5-vvnd",
+                "PKSA-q46n-4fdk-zjr4",
+                "PKSA-qzrn-rnz3-85w1",
+                "PKSA-w7xr-vk7n-rstm"
+            ]
         }
     },
     "minimum-stability": "stable",

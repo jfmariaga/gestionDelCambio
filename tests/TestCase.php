@@ -9,6 +9,8 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
+    use CreatesApplication;
+
     /** Crea un usuario con el rol dado (sembrando roles/permisos) y lo autentica. */
     protected function actuarComo(string $rol = 'administrador'): User
     {
