@@ -152,6 +152,8 @@
                     <livewire:solicitud.aprobacion-cierre :solicitud="$solicitud" />
                 @elseif ($cuestionarioPendiente)
                     {!! $bloqueadoPorCuestionario !!}
+                @elseif (! $gating->implementacionCompleta($solicitud))
+                    <div class="rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-6 text-center text-sm text-ink-400">Se habilita una vez la solicitud pase a «Implementado».</div>
                 @else
                     {!! $bloqueado !!}
                 @endif

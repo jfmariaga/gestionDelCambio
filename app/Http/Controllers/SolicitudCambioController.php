@@ -9,12 +9,15 @@ use App\Domain\GestionCambio\Notificador;
 use App\Domain\GestionCambio\TransicionSolicitud;
 use App\Enums\EstadoSolicitud;
 use App\Enums\TipoCambio;
+use App\Models\AccionPlan;
 use App\Models\BitacoraEvento;
 use App\Models\SolicitudCambio;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
 class SolicitudCambioController extends Controller
 {
@@ -27,11 +30,34 @@ class SolicitudCambioController extends Controller
 
         $solicitudes = SolicitudCambio::query()
             ->when(! $vistaGlobal && session('planta_id'), fn ($q) => $q->where('planta_id', session('planta_id')))
+            ->when(! $vistaGlobal, fn ($q) => $q->where(fn ($q) => $this->soloVisiblesPara($q, $usuario)))
             ->with('planta')
             ->latest()
             ->paginate(20);
 
         return view('solicitudes.index', compact('solicitudes', 'vistaGlobal'));
+    }
+
+    /**
+     * Roles aditivos: une lo que cada rol del usuario puede ver, con el mismo criterio que
+     * SolicitudCambioPolicy::view() (administrador/consulta ya salieron por $vistaGlobal).
+     */
+    private function soloVisiblesPara(Builder $query, $usuario): void
+    {
+        if ($usuario->hasRole('solicitante')) {
+            $query->orWhere('created_by', $usuario->id);
+        }
+
+        if ($usuario->hasRole('dueno_proceso')) {
+            $nombres = $usuario->procesos()->pluck('nombre');
+            $query->orWhereIn('area_proceso', $nombres)
+                ->orWhereHas('riesgosAsociados', fn ($r) => $r->whereIn('proceso_nombre', $nombres));
+        }
+
+        if ($usuario->hasRole('aprobador')) {
+            $query->orWhere('estado', '!=', EstadoSolicitud::Solicitado)
+                ->orWhere('created_by', $usuario->id);
+        }
     }
 
     public function create()
@@ -79,9 +105,22 @@ class SolicitudCambioController extends Controller
     public function edit(SolicitudCambio $solicitud)
     {
         $this->authorize('view', $solicitud);
-        abort_unless($solicitud->estado->esEditable(), 403, 'La solicitud ya no es editable.');
+        abort_unless($solicitud->estado->admiteGestionDePlanYCierre(), 403, 'La solicitud ya no admite cambios.');
 
         return view('solicitudes.edit', compact('solicitud'));
+    }
+
+    /**
+     * Vista mínima con UNA sola tarea del plan de acción, sin el resto del formulario: a donde
+     * enlazan las notificaciones de tarea para que quien no es solicitante/dueño/admin solo vea
+     * (y solo pueda operar) la acción que le corresponde.
+     */
+    public function tarea(SolicitudCambio $solicitud, AccionPlan $accion)
+    {
+        abort_unless($accion->solicitud_cambio_id === $solicitud->id, 404);
+        $this->authorize('view', $solicitud);
+
+        return view('solicitudes.tarea', compact('solicitud', 'accion'));
     }
 
     public function update(Request $request, SolicitudCambio $solicitud)
@@ -136,7 +175,12 @@ class SolicitudCambioController extends Controller
 
         if ($solicitud->estado === EstadoSolicitud::EnEvaluacion) {
             $this->authorize('decidir', $solicitud);
-            $transicion->registrarDecisionInicial($solicitud, Auth::user(), $datos['accion'], $datos['comentario'] ?? null);
+
+            try {
+                $transicion->registrarDecisionInicial($solicitud, Auth::user(), $datos['accion'], $datos['comentario'] ?? null);
+            } catch (RuntimeException $e) {
+                return redirect()->route('solicitudes.show', $solicitud)->with('error', $e->getMessage());
+            }
 
             $mensaje = $solicitud->fresh()->estado === EstadoSolicitud::Aprobado
                 ? 'Solicitud aprobada.'
@@ -147,7 +191,12 @@ class SolicitudCambioController extends Controller
 
         if ($solicitud->estado === EstadoSolicitud::EnVerificacion) {
             $this->authorize('decidirCierre', $solicitud);
-            $bloqueos = $transicion->registrarDecisionCierre($solicitud, Auth::user(), $datos['accion'], $datos['comentario'] ?? null);
+
+            try {
+                $bloqueos = $transicion->registrarDecisionCierre($solicitud, Auth::user(), $datos['accion'], $datos['comentario'] ?? null);
+            } catch (RuntimeException $e) {
+                return redirect()->route('solicitudes.show', $solicitud)->with('error', $e->getMessage());
+            }
 
             if ($bloqueos !== []) {
                 return redirect()->route('solicitudes.show', $solicitud)->with('errores_cierre', $bloqueos);
@@ -171,10 +220,27 @@ class SolicitudCambioController extends Controller
         return redirect()->route('solicitudes.show', $solicitud)->with('status', 'Implementación iniciada.');
     }
 
+    public function marcarImplementado(SolicitudCambio $solicitud, TransicionSolicitud $transicion)
+    {
+        $this->authorize('gestionarImplementacion', $solicitud);
+
+        $bloqueos = $transicion->marcarImplementado($solicitud, Auth::id());
+
+        if ($bloqueos !== []) {
+            return redirect()->route('solicitudes.show', $solicitud)->with('errores_implementacion', $bloqueos);
+        }
+
+        return redirect()->route('solicitudes.show', $solicitud)->with('status', 'Implementación marcada como completa. Ya puede continuar a seguimiento y cierre.');
+    }
+
     public function enviarVerificacion(SolicitudCambio $solicitud, TransicionSolicitud $transicion)
     {
         $this->authorize('gestionarImplementacion', $solicitud);
-        $transicion->enviarAVerificacion($solicitud, Auth::id());
+        $bloqueos = $transicion->enviarAVerificacion($solicitud, Auth::id());
+
+        if ($bloqueos !== []) {
+            return redirect()->route('solicitudes.show', $solicitud)->with('errores_verificacion', $bloqueos);
+        }
 
         return redirect()->route('solicitudes.show', $solicitud)->with('status', 'Solicitud enviada a seguimiento y cierre.');
     }

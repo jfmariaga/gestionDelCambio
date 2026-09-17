@@ -67,8 +67,9 @@ class AprobacionDosCompuertasTest extends TestCase
         $transicion->marcarImplementadoSiCorresponde($solicitud->fresh(), $sig->id);
         $this->assertSame(EstadoSolicitud::Implementado, $solicitud->fresh()->estado);
 
-        // Compuerta 2
-        $transicion->enviarAVerificacion($solicitud->fresh(), $sig->id);
+        // Compuerta 2: exige la nota de cierre registrada.
+        $solicitud->update(['nota_cierre' => 'Se implementó sin novedades.']);
+        $this->assertSame([], $transicion->enviarAVerificacion($solicitud->fresh(), $sig->id));
         $this->assertSame(EstadoSolicitud::EnVerificacion, $solicitud->fresh()->estado);
         $this->assertDatabaseHas('aprobaciones_solicitud', [
             'solicitud_cambio_id' => $solicitud->id,
@@ -79,6 +80,97 @@ class AprobacionDosCompuertasTest extends TestCase
         $bloqueos = $transicion->registrarDecisionCierre($solicitud->fresh(), $sig, 'aprobar', null);
         $this->assertSame([], $bloqueos);
         $this->assertSame(EstadoSolicitud::Cerrado, $solicitud->fresh()->estado);
+    }
+
+    public function test_marcar_implementado_manual_bloquea_si_hay_acciones_sin_validar(): void
+    {
+        $transicion = app(TransicionSolicitud::class);
+        $solicitud = SolicitudCambio::factory()->create(['estado' => EstadoSolicitud::EnImplementacion]);
+        AccionPlan::create([
+            'solicitud_cambio_id' => $solicitud->id, 'numero' => 1,
+            'descripcion' => 'Acción', 'estado' => EstadoAccionPlan::EnCurso->value,
+        ]);
+
+        $bloqueos = $transicion->marcarImplementado($solicitud, null);
+
+        $this->assertNotEmpty($bloqueos);
+        $this->assertSame(EstadoSolicitud::EnImplementacion, $solicitud->fresh()->estado);
+    }
+
+    public function test_marcar_implementado_manual_funciona_aunque_no_haya_acciones_en_el_plan(): void
+    {
+        // Antes del botón manual, una solicitud SIN acciones de plan se quedaba atascada para
+        // siempre en "en_implementacion" (el paso automático exigía al menos una acción).
+        $transicion = app(TransicionSolicitud::class);
+        $solicitud = SolicitudCambio::factory()->create(['estado' => EstadoSolicitud::EnImplementacion]);
+
+        $bloqueos = $transicion->marcarImplementado($solicitud, null);
+
+        $this->assertSame([], $bloqueos);
+        $this->assertSame(EstadoSolicitud::Implementado, $solicitud->fresh()->estado);
+    }
+
+    public function test_boton_marcar_implementado_en_la_pagina(): void
+    {
+        $lider = $this->actuarComo('solicitante');
+        $solicitud = SolicitudCambio::factory()->create(['estado' => EstadoSolicitud::EnImplementacion, 'created_by' => $lider->id]);
+        AccionPlan::create([
+            'solicitud_cambio_id' => $solicitud->id, 'numero' => 1,
+            'descripcion' => 'Acción', 'estado' => EstadoAccionPlan::Validada->value,
+        ]);
+
+        $this->get(route('solicitudes.show', $solicitud))
+            ->assertOk()
+            ->assertSee('Marcar como implementado');
+
+        $this->post(route('solicitudes.marcarImplementado', $solicitud))
+            ->assertRedirect(route('solicitudes.show', $solicitud))
+            ->assertSessionHas('status');
+
+        $this->assertSame(EstadoSolicitud::Implementado, $solicitud->fresh()->estado);
+    }
+
+    public function test_enviar_a_verificacion_exige_la_nota_de_cierre(): void
+    {
+        $transicion = app(TransicionSolicitud::class);
+        $solicitud = SolicitudCambio::factory()->create(['estado' => EstadoSolicitud::Implementado]);
+
+        $bloqueos = $transicion->enviarAVerificacion($solicitud, null);
+
+        $this->assertNotEmpty($bloqueos);
+        $this->assertSame(EstadoSolicitud::Implementado, $solicitud->fresh()->estado);
+
+        $solicitud->update(['nota_cierre' => 'Se implementó sin novedades.']);
+        $this->assertSame([], $transicion->enviarAVerificacion($solicitud->fresh(), null));
+        $this->assertSame(EstadoSolicitud::EnVerificacion, $solicitud->fresh()->estado);
+    }
+
+    public function test_el_enlace_editar_sigue_visible_en_implementado_para_escribir_la_nota_de_cierre(): void
+    {
+        // Sin este enlace, un usuario llega al bloqueo de "enviar a verificación" (exige la
+        // nota de cierre) sin ninguna forma de llegar a la sección donde se escribe.
+        $lider = $this->actuarComo('solicitante');
+        $solicitud = SolicitudCambio::factory()->create(['estado' => EstadoSolicitud::Implementado, 'created_by' => $lider->id]);
+
+        $this->get(route('solicitudes.show', $solicitud))
+            ->assertOk()
+            ->assertSee(route('solicitudes.edit', $solicitud), false);
+
+        $this->get(route('solicitudes.index'))
+            ->assertOk()
+            ->assertSee(route('solicitudes.edit', $solicitud), false);
+    }
+
+    public function test_boton_enviar_a_verificacion_muestra_bloqueo_sin_nota_de_cierre(): void
+    {
+        $lider = $this->actuarComo('solicitante');
+        $solicitud = SolicitudCambio::factory()->create(['estado' => EstadoSolicitud::Implementado, 'created_by' => $lider->id]);
+
+        $this->post(route('solicitudes.enviarVerificacion', $solicitud))
+            ->assertRedirect(route('solicitudes.show', $solicitud))
+            ->assertSessionHas('errores_verificacion');
+
+        $this->assertSame(EstadoSolicitud::Implementado, $solicitud->fresh()->estado);
     }
 
     public function test_una_devolucion_en_compuerta_1_vuelve_a_solicitado(): void

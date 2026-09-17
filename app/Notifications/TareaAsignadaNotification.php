@@ -30,7 +30,7 @@ class TareaAsignadaNotification extends Notification implements ShouldQueue
             ->line("Tarea: {$this->accion->descripcion}")
             ->line('Proceso: '.($this->accion->proceso ?: '—'))
             ->line('Fecha: '.(optional($this->accion->fecha)->format('d/m/Y') ?: 'sin fecha'))
-            ->action('Ver solicitud', route('solicitudes.show', $solicitud));
+            ->action('Ver tarea', route('solicitudes.tarea', [$solicitud, $this->accion]));
     }
 
     public function toArray(object $notifiable): array
@@ -42,7 +42,7 @@ class TareaAsignadaNotification extends Notification implements ShouldQueue
             'accion_id' => $this->accion->id,
             'descripcion' => $this->accion->descripcion,
             'mensaje' => "Se le asignó la tarea «{$this->accion->descripcion}».",
-            'url' => route('solicitudes.show', $this->accion->solicitud_cambio_id),
+            'url' => route('solicitudes.tarea', [$this->accion->solicitud_cambio_id, $this->accion->id]),
         ];
     }
 }

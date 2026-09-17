@@ -44,6 +44,7 @@ class SolicitudCambio extends Model
         'aprobado_por',
         'aprobado_at',
         'decision_comentario',
+        'nota_cierre',
         'created_by',
         'updated_by',
     ];

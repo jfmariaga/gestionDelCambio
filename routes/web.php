@@ -41,10 +41,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/solicitudes', [SolicitudCambioController::class, 'store'])->name('solicitudes.store');
         Route::get('/solicitudes/{solicitud}', [SolicitudCambioController::class, 'show'])->name('solicitudes.show');
         Route::get('/solicitudes/{solicitud}/editar', [SolicitudCambioController::class, 'edit'])->name('solicitudes.edit');
+        Route::get('/solicitudes/{solicitud}/tareas/{accion}', [SolicitudCambioController::class, 'tarea'])->name('solicitudes.tarea');
         Route::put('/solicitudes/{solicitud}', [SolicitudCambioController::class, 'update'])->name('solicitudes.update');
         Route::post('/solicitudes/{solicitud}/enviar', [SolicitudCambioController::class, 'enviar'])->name('solicitudes.enviar');
         Route::post('/solicitudes/{solicitud}/decision', [SolicitudCambioController::class, 'decision'])->name('solicitudes.decision');
         Route::post('/solicitudes/{solicitud}/implementar', [SolicitudCambioController::class, 'implementar'])->name('solicitudes.implementar');
+        Route::post('/solicitudes/{solicitud}/marcar-implementado', [SolicitudCambioController::class, 'marcarImplementado'])->name('solicitudes.marcarImplementado');
         Route::post('/solicitudes/{solicitud}/enviar-verificacion', [SolicitudCambioController::class, 'enviarVerificacion'])->name('solicitudes.enviarVerificacion');
         Route::post('/solicitudes/{solicitud}/cerrar', [SolicitudCambioController::class, 'cerrar'])->name('solicitudes.cerrar');
         Route::post('/solicitudes/{solicitud}/anular', [SolicitudCambioController::class, 'anular'])->name('solicitudes.anular');

@@ -28,8 +28,38 @@ class RiesgosAsociados extends Component
 
     public function mount(SolicitudCambio $solicitud): void
     {
-        $this->authorize('completarSecciones', $solicitud);
+        // Poder ver la solicitud (p. ej. un responsable de tarea del plan) O poder completar
+        // secciones (p. ej. un dueño de proceso sin filas asignadas todavía) alcanza para
+        // montar la página; cada acción de escritura exige su propio permiso.
+        $user = Auth::user();
+        abort_unless($user->can('view', $solicitud) || $user->can('completarSecciones', $solicitud), 403);
         $this->solicitud = $solicitud;
+        $this->sincronizarEdicion();
+    }
+
+    /**
+     * Vuelca los valores actuales de las filas en $edicion para que `wire:model` siempre tenga
+     * un valor de partida (si no, Livewire los trata como vacíos y los pisa en el próximo
+     * render, aunque la fila ya tenga datos guardados).
+     */
+    private function sincronizarEdicion(?int $soloId = null): void
+    {
+        foreach ($this->filas as $fila) {
+            if ($soloId !== null && $fila->id !== $soloId) {
+                continue;
+            }
+
+            $this->edicion[$fila->id] = [
+                'proceso_nombre' => $fila->proceso_nombre,
+                'riesgo_texto' => $fila->riesgo_texto,
+                'control_existente' => $fila->control_existente,
+                'accion_requerida' => $fila->accion_requerida,
+                'responsable_id' => $fila->responsable_id,
+                'fecha' => optional($fila->fecha)->toDateString(),
+                'probabilidad' => $fila->probabilidad,
+                'impacto' => $fila->impacto,
+            ];
+        }
     }
 
     private function autorizarProceso(string $procesoNombre): void
@@ -42,10 +72,24 @@ class RiesgosAsociados extends Component
         abort_unless($ok, 403, 'No puede editar filas de este proceso.');
     }
 
+    /** Los riesgos solo se editan mientras la solicitud está en borrador/evaluación y sin congelar. */
+    private function bloqueada(): bool
+    {
+        if (! $this->solicitud->estado->esEditable() || $this->solicitud->estaCongelada()) {
+            $this->dispatch('solicitud-bloqueada');
+            $this->dispatch('toast', icon: 'error', title: 'La solicitud está bloqueada y no admite cambios.');
+
+            return true;
+        }
+
+        return false;
+    }
+
     #[On('secciones-actualizadas')]
     public function refrescar(): void
     {
         unset($this->filas);
+        $this->sincronizarEdicion();
     }
 
     #[Computed]
@@ -60,6 +104,10 @@ class RiesgosAsociados extends Component
 
     public function guardarFila(int $id): void
     {
+        if ($this->bloqueada()) {
+            return;
+        }
+
         $fila = $this->solicitud->riesgosAsociados()->findOrFail($id);
         $this->autorizarProceso($fila->proceso_nombre);
         $datos = $this->edicion[$id] ?? [];
@@ -102,12 +150,21 @@ class RiesgosAsociados extends Component
         app(SincronizadorPlanRiesgos::class)->sincronizar($this->solicitud->fresh());
 
         unset($this->filas);
+        $this->sincronizarEdicion($id);
         $this->dispatch('riesgo-guardado', id: $id);
+        // Para que el Plan de acción refleje la tarea sincronizada sin recargar la página.
+        $this->dispatch('secciones-actualizadas');
         $this->dispatch('toast', icon: 'success', title: 'Riesgo actualizado.');
     }
 
     public function agregarManual(): void
     {
+        $this->authorize('completarSecciones', $this->solicitud);
+
+        if ($this->bloqueada()) {
+            return;
+        }
+
         RiesgoAsociado::create([
             'solicitud_cambio_id' => $this->solicitud->id,
             'riesgo_predeterminado_id' => null,
@@ -118,11 +175,18 @@ class RiesgosAsociados extends Component
         ]);
 
         unset($this->filas);
+        $this->sincronizarEdicion();
         $this->dispatch('toast', icon: 'success', title: 'Riesgo agregado.');
     }
 
     public function confirmarEliminar(int $id, bool $eliminar): void
     {
+        $this->authorize('completarSecciones', $this->solicitud);
+
+        if ($this->bloqueada()) {
+            return;
+        }
+
         $fila = $this->solicitud->riesgosAsociados()->findOrFail($id);
 
         if ($fila->estado !== EstadoFila::Huerfana && $fila->riesgo_predeterminado_id !== null) {
@@ -134,7 +198,8 @@ class RiesgosAsociados extends Component
             $fila->delete();
             app(SincronizadorPlanRiesgos::class)->sincronizar($this->solicitud->fresh());
 
-            unset($this->filas);
+            unset($this->filas, $this->edicion[$id]);
+            $this->dispatch('secciones-actualizadas');
             $this->dispatch('toast', icon: 'success', title: 'Riesgo eliminado.');
 
             return;

@@ -48,19 +48,27 @@ class SeleccionPlantaTest extends TestCase
         $panal = Planta::factory()->create(['nombre' => 'Panal', 'codigo' => 'PANAL']);
         $leva = Planta::factory()->create(['nombre' => 'Leva Pan', 'codigo' => 'LEVAPAN']);
 
-        $enPanal = SolicitudCambio::factory()->create(['planta_id' => $panal->id, 'nombre_cambio' => 'Cambio en Panal']);
-        $enLeva = SolicitudCambio::factory()->create(['planta_id' => $leva->id, 'nombre_cambio' => 'Cambio en Leva']);
-
         $user = User::factory()->create();
         $user->forceFill(['planta_preferida_id' => $panal->id])->save();
         $user->assignRole('solicitante');
+
+        // Propias en ambas plantas: la del listado solo debe filtrar por la planta activa,
+        // no por autoría, así que la de Leva Pan se oculta aunque sea suya.
+        SolicitudCambio::factory()->create(['planta_id' => $panal->id, 'nombre_cambio' => 'Cambio en Panal', 'created_by' => $user->id]);
+        SolicitudCambio::factory()->create(['planta_id' => $leva->id, 'nombre_cambio' => 'Cambio en Leva', 'created_by' => $user->id]);
+
+        // De otro solicitante, en la misma planta activa: se oculta por no ser autor.
+        $otro = User::factory()->create();
+        $otro->assignRole('solicitante');
+        SolicitudCambio::factory()->create(['planta_id' => $panal->id, 'nombre_cambio' => 'Cambio ajeno en Panal', 'created_by' => $otro->id]);
 
         $this->actingAs($user)
             ->withSession(['planta_id' => $panal->id])
             ->get(route('solicitudes.index'))
             ->assertOk()
             ->assertSee('Cambio en Panal')
-            ->assertDontSee('Cambio en Leva');
+            ->assertDontSee('Cambio en Leva')
+            ->assertDontSee('Cambio ajeno en Panal');
     }
 
     public function test_administrador_ve_todas_las_plantas(): void

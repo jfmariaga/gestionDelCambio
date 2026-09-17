@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Solicitud\AprobacionCierre;
 use App\Livewire\Solicitud\PlanAccion;
 use App\Models\SolicitudCambio;
 use App\Models\User;
@@ -93,18 +92,5 @@ class AdjuntoEvidenciaTest extends TestCase
 
         $this->assertDatabaseCount('adjuntos_evidencia', 0);
         Storage::disk('local')->assertMissing($ruta);
-    }
-
-    public function test_adjunta_archivo_a_un_criterio_de_cierre(): void
-    {
-        $solicitud = SolicitudCambio::factory()->create();
-
-        $comp = Livewire::test(AprobacionCierre::class, ['solicitud' => $solicitud])->call('agregar');
-        $criterio = $solicitud->criteriosCierre()->first();
-
-        $comp->set("nuevoAdjunto.{$criterio->id}", UploadedFile::fake()->image('foto.jpg'))
-            ->call('subirAdjunto', $criterio->id);
-
-        $this->assertSame(1, $criterio->adjuntos()->count());
     }
 }

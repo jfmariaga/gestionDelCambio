@@ -90,12 +90,7 @@ final class TransicionSolicitud
             return;
         }
 
-        $total = $solicitud->accionesPlan()->count();
-        $sinValidar = $solicitud->accionesPlan()
-            ->where('estado', '!=', EstadoAccionPlan::Validada->value)
-            ->count();
-
-        if ($total === 0 || $sinValidar > 0) {
+        if ($this->accionesSinValidar($solicitud) > 0) {
             return;
         }
 
@@ -103,13 +98,48 @@ final class TransicionSolicitud
         $this->registrar($solicitud, $usuarioId, 'plan_implementado');
     }
 
+    /**
+     * Botón manual "Marcar como implementado": el paso automático de arriba solo dispara al
+     * validar la última tarea, así que una solicitud sin tareas (o con alguna que quedó sin
+     * validar por otro camino) se quedaba atascada en "En implementación" sin forma de avanzar.
+     *
+     * @return array<int,string> bloqueos encontrados; vacío si se pudo marcar.
+     */
+    public function marcarImplementado(SolicitudCambio $solicitud, ?int $usuarioId): array
+    {
+        $this->exigirEstado($solicitud, EstadoSolicitud::EnImplementacion);
+
+        $sinValidar = $this->accionesSinValidar($solicitud);
+
+        if ($sinValidar > 0) {
+            return ["Hay {$sinValidar} acción(es) del plan sin validar."];
+        }
+
+        $solicitud->forceFill(['estado' => EstadoSolicitud::Implementado])->save();
+        $this->registrar($solicitud, $usuarioId, 'plan_implementado');
+
+        return [];
+    }
+
+    private function accionesSinValidar(SolicitudCambio $solicitud): int
+    {
+        return $solicitud->accionesPlan()
+            ->where('estado', '!=', EstadoAccionPlan::Validada->value)
+            ->count();
+    }
+
     /* ---------------------------------------------------------------------
      | Compuerta 2 — seguimiento y cierre (en_verificacion → cerrado)
      * ------------------------------------------------------------------- */
 
-    public function enviarAVerificacion(SolicitudCambio $solicitud, ?int $usuarioId): void
+    /** @return array<int,string> bloqueos encontrados; vacío si se pudo enviar a verificación. */
+    public function enviarAVerificacion(SolicitudCambio $solicitud, ?int $usuarioId): array
     {
         $this->exigirEstado($solicitud, EstadoSolicitud::Implementado);
+
+        if (blank($solicitud->nota_cierre)) {
+            return ['Debe registrar la nota de cierre antes de enviar a verificación.'];
+        }
 
         DB::transaction(function () use ($solicitud, $usuarioId) {
             $solicitud->forceFill(['estado' => EstadoSolicitud::EnVerificacion])->save();
@@ -118,6 +148,8 @@ final class TransicionSolicitud
         });
 
         app(Notificador::class)->notificarEvento($solicitud, 'verificacion');
+
+        return [];
     }
 
     /**

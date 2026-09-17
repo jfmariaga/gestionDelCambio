@@ -25,26 +25,26 @@
 
             @if ($fila->riesgo_predeterminado_id === null)
                 <div class="mb-3 grid gap-3 sm:grid-cols-2">
-                    <div><label class="field-label">Proceso</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.proceso_nombre" value="{{ $fila->proceso_nombre }}"></div>
-                    <div><label class="field-label">Riesgo</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.riesgo_texto" value="{{ $fila->riesgo_texto }}"></div>
+                    <div><label class="field-label">Proceso</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.proceso_nombre"></div>
+                    <div><label class="field-label">Riesgo</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.riesgo_texto"></div>
                 </div>
             @endif
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div class="sm:col-span-2 lg:col-span-1"><label class="field-label">Control existente</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.control_existente" value="{{ $fila->control_existente }}"></div>
-                <div class="sm:col-span-2 lg:col-span-1"><label class="field-label">Validación requerida</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.accion_requerida" value="{{ $fila->accion_requerida }}"></div>
+                <div class="sm:col-span-2 lg:col-span-1"><label class="field-label">Control existente</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.control_existente"></div>
+                <div class="sm:col-span-2 lg:col-span-1"><label class="field-label">Validación requerida</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.accion_requerida"></div>
                 <div>
                     <label class="field-label">Responsable</label>
                     <x-user-select :users="$this->usuarios" :model="'edicion.'.$fila->id.'.responsable_id'" :current="$fila->responsable_id" class="w-full" />
                 </div>
-                <div><label class="field-label">Fecha</label><input type="date" class="input input-sm" wire:model="edicion.{{ $fila->id }}.fecha" value="{{ optional($fila->fecha)->toDateString() }}"></div>
+                <div><label class="field-label">Fecha</label><input type="date" class="input input-sm" wire:model="edicion.{{ $fila->id }}.fecha"></div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="field-label">Probabilidad</label>
                         <select class="select input-sm" wire:model="edicion.{{ $fila->id }}.probabilidad">
                             <option value="">—</option>
                             @foreach (\App\Enums\Probabilidad::opciones() as $valor => $etiqueta)
-                                <option value="{{ $valor }}" @selected((int) $fila->probabilidad === $valor)>{{ $etiqueta }} ({{ $valor }})</option>
+                                <option value="{{ $valor }}">{{ $etiqueta }} ({{ $valor }})</option>
                             @endforeach
                         </select>
                         @error("edicion.{$fila->id}.probabilidad") <span class="text-[11px] text-rose-600">{{ $message }}</span> @enderror
@@ -54,7 +54,7 @@
                         <select class="select input-sm" wire:model="edicion.{{ $fila->id }}.impacto">
                             <option value="">—</option>
                             @foreach (\App\Enums\Impacto::opciones() as $valor => $etiqueta)
-                                <option value="{{ $valor }}" @selected((int) $fila->impacto === $valor)>{{ $etiqueta }} ({{ $valor }})</option>
+                                <option value="{{ $valor }}">{{ $etiqueta }} ({{ $valor }})</option>
                             @endforeach
                         </select>
                         @error("edicion.{$fila->id}.impacto") <span class="text-[11px] text-rose-600">{{ $message }}</span> @enderror

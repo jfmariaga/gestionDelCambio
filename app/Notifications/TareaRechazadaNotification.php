@@ -28,7 +28,7 @@ class TareaRechazadaNotification extends Notification implements ShouldQueue
             ->greeting("Hola {$notifiable->name},")
             ->line("El líder devolvió la tarea «{$this->accion->descripcion}» de la solicitud {$solicitud->consecutivo}.")
             ->line("Motivo: {$this->motivo}")
-            ->action('Ver solicitud', route('solicitudes.show', $solicitud));
+            ->action('Ver tarea', route('solicitudes.tarea', [$solicitud, $this->accion]));
     }
 
     public function toArray(object $notifiable): array
@@ -40,7 +40,7 @@ class TareaRechazadaNotification extends Notification implements ShouldQueue
             'accion_id' => $this->accion->id,
             'motivo' => $this->motivo,
             'mensaje' => "La tarea «{$this->accion->descripcion}» fue devuelta: {$this->motivo}",
-            'url' => route('solicitudes.show', $this->accion->solicitud_cambio_id),
+            'url' => route('solicitudes.tarea', [$this->accion->solicitud_cambio_id, $this->accion->id]),
         ];
     }
 }

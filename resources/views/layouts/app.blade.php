@@ -99,13 +99,7 @@
                     @endisset
                 </div>
 
-                @php($noLeidas = auth()->user()?->unreadNotifications()->count() ?? 0)
-                <a href="{{ route('notificaciones.index') }}" class="relative btn btn-ghost p-2" title="Notificaciones">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                    @if ($noLeidas > 0)
-                        <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">{{ $noLeidas > 9 ? '9+' : $noLeidas }}</span>
-                    @endif
-                </a>
+                <livewire:notificaciones.campana />
 
                 @php($plantaActiva = session('planta_id') ? \App\Models\Planta::find(session('planta_id')) : null)
                 @if ($plantaActiva)
@@ -131,7 +125,7 @@
     </div>
 </div>
 
-@if (session('status') || session('error') || session('errores_cierre'))
+@if (session('status') || session('error') || session('errores_cierre') || session('errores_implementacion') || session('errores_verificacion') || $errors->any())
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             @if (session('status'))
@@ -144,6 +138,24 @@
                 window.aviso('No se puede cerrar la solicitud',
                     '<ul style="text-align:left;margin:0;padding-left:1.1rem">' +
                     @json(collect(session('errores_cierre'))->map(fn ($e) => '<li>'.e($e).'</li>')->implode('')) +
+                    '</ul>');
+            @endif
+            @if (session('errores_implementacion'))
+                window.aviso('No se puede marcar como implementado',
+                    '<ul style="text-align:left;margin:0;padding-left:1.1rem">' +
+                    @json(collect(session('errores_implementacion'))->map(fn ($e) => '<li>'.e($e).'</li>')->implode('')) +
+                    '</ul>');
+            @endif
+            @if (session('errores_verificacion'))
+                window.aviso('No se puede enviar a verificación',
+                    '<ul style="text-align:left;margin:0;padding-left:1.1rem">' +
+                    @json(collect(session('errores_verificacion'))->map(fn ($e) => '<li>'.e($e).'</li>')->implode('')) +
+                    '</ul>');
+            @endif
+            @if ($errors->any())
+                window.aviso('Revise los datos enviados',
+                    '<ul style="text-align:left;margin:0;padding-left:1.1rem">' +
+                    @json(collect($errors->all())->map(fn ($e) => '<li>'.e($e).'</li>')->implode('')) +
                     '</ul>');
             @endif
         });

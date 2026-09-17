@@ -16,6 +16,7 @@ use App\Notifications\TareaRechazadaNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -24,6 +25,9 @@ class PlanAccion extends Component
     use ConListaDeUsuarios, WithFileUploads;
 
     public SolicitudCambio $solicitud;
+
+    /** Modo "foco": solo esta tarea es visible/operable (link directo desde una notificación). */
+    public ?int $soloAccionId = null;
 
     /** @var array<int,array<string,mixed>> */
     public array $edicion = [];
@@ -34,9 +38,10 @@ class PlanAccion extends Component
     /** @var array<int,UploadedFile|null> */
     public array $nuevoAdjunto = [];
 
-    public function mount(SolicitudCambio $solicitud): void
+    public function mount(SolicitudCambio $solicitud, ?int $soloAccionId = null): void
     {
         $this->solicitud = $solicitud;
+        $this->soloAccionId = $soloAccionId;
 
         // FR-043 / FR-055: quien es responsable o creador de alguna tarea del plan puede
         // operar en esta sección aunque no tenga otro rol sobre la solicitud.
@@ -51,11 +56,26 @@ class PlanAccion extends Component
         $this->sincronizarEdicion();
     }
 
+    /** En modo foco, ninguna acción de escritura puede tocar otra tarea distinta a la enlazada. */
+    private function fueraDeFoco(int $id): bool
+    {
+        return $this->soloAccionId !== null && $id !== $this->soloAccionId;
+    }
+
+    /** Un riesgo recién calificado Medio/Alto sincroniza una tarea aquí; refleja el cambio sin recargar. */
+    #[On('secciones-actualizadas')]
+    public function refrescar(): void
+    {
+        unset($this->acciones);
+        $this->sincronizarEdicion();
+    }
+
     #[Computed]
     public function acciones()
     {
         return $this->solicitud->accionesPlan()
             ->with(['responsableUsuario:id,name', 'creador:id,name', 'adjuntos.subidoPor:id,name', 'riesgoAsociado'])
+            ->when($this->soloAccionId, fn ($q) => $q->whereKey($this->soloAccionId))
             ->get();
     }
 
@@ -89,8 +109,14 @@ class PlanAccion extends Component
         return $user->id === $this->solicitud->created_by || $user->hasRole('administrador');
     }
 
+    private function esResponsable(AccionPlan $accion): bool
+    {
+        return Auth::id() === $accion->responsable_id;
+    }
+
     public function agregar(): void
     {
+        abort_if($this->soloAccionId !== null, 403);
         abort_unless($this->solicitud->estado === EstadoSolicitud::Solicitado, 403);
 
         AccionPlan::create([
@@ -108,13 +134,17 @@ class PlanAccion extends Component
 
     public function guardar(int $id): void
     {
+        abort_if($this->fueraDeFoco($id), 403);
         $accion = $this->solicitud->accionesPlan()->findOrFail($id);
+        abort_unless($this->esResponsable($accion) || $this->esLider(), 403);
         $datos = $this->edicion[$id] ?? [];
 
         $responsableAntes = $accion->responsable_id;
 
-        // En borrador se edita todo; ya aprobada, solo estado/evidencia (FR-043).
-        if ($this->solicitud->estado === EstadoSolicitud::Solicitado) {
+        // Descripción/proceso/responsable/fecha son del líder (o admin): en borrador puede
+        // reorganizar el plan. El responsable de la tarea (FR-055) solo toca estado/evidencia/nota,
+        // sin importar el estado de la solicitud.
+        if ($this->solicitud->estado === EstadoSolicitud::Solicitado && $this->esLider()) {
             $responsableId = ($datos['responsable_id'] ?? $accion->responsable_id) ?: null;
             $responsableNombre = $responsableId
                 ? (User::whereKey($responsableId)->value('name') ?? $accion->responsable)
@@ -131,7 +161,8 @@ class PlanAccion extends Component
             ]);
         }
 
-        // El cambio libre de estado solo aplica antes de entrar al flujo de validación.
+        // El cambio libre de estado (Pendiente/En curso) solo aplica antes de entrar al flujo
+        // de validación (quién puede llegar hasta aquí ya se validó arriba).
         if (isset($datos['estado']) && in_array($datos['estado'], [EstadoAccionPlan::Pendiente->value, EstadoAccionPlan::EnCurso->value], true)) {
             $accion->estado = $datos['estado'];
         }
@@ -156,6 +187,7 @@ class PlanAccion extends Component
     /** El responsable marca su tarea como cerrada: pasa a "pendiente de validación" (FR-055). */
     public function marcarCerrada(int $id): void
     {
+        abort_if($this->fueraDeFoco($id), 403);
         $accion = $this->solicitud->accionesPlan()->findOrFail($id);
         abort_unless(Auth::id() === $accion->responsable_id || Auth::user()->hasRole('administrador'), 403);
 
@@ -172,6 +204,7 @@ class PlanAccion extends Component
     /** El líder valida la tarea cerrada (FR-056). */
     public function validar(int $id): void
     {
+        abort_if($this->fueraDeFoco($id), 403);
         abort_unless($this->esLider(), 403);
         $accion = $this->solicitud->accionesPlan()->findOrFail($id);
 
@@ -194,6 +227,7 @@ class PlanAccion extends Component
     /** El líder rechaza la tarea: vuelve a "En curso" y se notifica al responsable (FR-056). */
     public function rechazar(int $id): void
     {
+        abort_if($this->fueraDeFoco($id), 403);
         abort_unless($this->esLider(), 403);
         $accion = $this->solicitud->accionesPlan()->findOrFail($id);
         $motivo = trim($this->rechazo[$id] ?? '');
@@ -217,7 +251,9 @@ class PlanAccion extends Component
 
     public function subirAdjunto(int $id): void
     {
+        abort_if($this->fueraDeFoco($id), 403);
         $accion = $this->solicitud->accionesPlan()->findOrFail($id);
+        abort_unless($this->esResponsable($accion) || $this->esLider(), 403);
         $archivo = $this->nuevoAdjunto[$id] ?? null;
         abort_unless($archivo, 422, 'Seleccione un archivo.');
 
@@ -243,6 +279,7 @@ class PlanAccion extends Component
             ->where('adjuntable_type', (new AccionPlan)->getMorphClass())
             ->firstOrFail();
 
+        abort_if($this->fueraDeFoco($adjunto->adjuntable_id), 403);
         abort_unless(
             $adjunto->subido_por === Auth::id() || $this->esLider(),
             403,
@@ -255,6 +292,7 @@ class PlanAccion extends Component
 
     public function eliminar(int $id): void
     {
+        abort_if($this->soloAccionId !== null, 403);
         abort_unless($this->solicitud->estado === EstadoSolicitud::Solicitado, 403);
         $this->solicitud->accionesPlan()->whereKey($id)->get()->each->delete();
         unset($this->acciones, $this->edicion[$id]);

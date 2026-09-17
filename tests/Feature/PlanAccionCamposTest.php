@@ -63,22 +63,14 @@ class PlanAccionCamposTest extends TestCase
         $comp->assertSet("edicion.{$b->id}.descripcion", 'Fila B');   // pero su edición en curso se conserva
     }
 
-    public function test_cierre_guardar_persiste_criterio_valor_y_detalle(): void
+    public function test_cierre_guardar_persiste_la_nota_de_cierre(): void
     {
         $solicitud = SolicitudCambio::factory()->create();
 
-        $comp = Livewire::test(AprobacionCierre::class, ['solicitud' => $solicitud])->call('agregar');
-        $criterio = $solicitud->criteriosCierre()->first();
+        Livewire::test(AprobacionCierre::class, ['solicitud' => $solicitud])
+            ->set('notaCierre', 'Se capacitó al personal, lista de asistencia adjunta.')
+            ->call('guardar');
 
-        $comp->set("edicion.{$criterio->id}.descripcion", '¿Se capacitó al personal?')
-            ->set("edicion.{$criterio->id}.valor", 'SI')
-            ->set("edicion.{$criterio->id}.detalle", 'Lista de asistencia adjunta')
-            ->call('guardar', $criterio->id);
-
-        $criterio->refresh();
-        $this->assertSame('¿Se capacitó al personal?', $criterio->descripcion);
-        $this->assertSame('SI', $criterio->valor);
-        $this->assertSame('Lista de asistencia adjunta', $criterio->detalle);
-        $comp->assertSet("edicion.{$criterio->id}.valor", 'SI');
+        $this->assertSame('Se capacitó al personal, lista de asistencia adjunta.', $solicitud->fresh()->nota_cierre);
     }
 }

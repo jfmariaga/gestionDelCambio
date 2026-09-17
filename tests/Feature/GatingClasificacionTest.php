@@ -52,7 +52,7 @@ class GatingClasificacionTest extends TestCase
         $this->assertFalse($gating->permite($solicitud, 'plan'));
     }
 
-    public function test_clasificacion_menor_habilita_solo_plan_y_cierre(): void
+    public function test_clasificacion_menor_habilita_plan_pero_cierre_espera_a_la_implementacion(): void
     {
         $solicitud = SolicitudCambio::factory()->create();
         $this->evaluarConSuma($solicitud, 13);
@@ -63,10 +63,17 @@ class GatingClasificacionTest extends TestCase
         $solicitud->refresh();
 
         $this->assertTrue($gating->permite($solicitud, 'plan'));
-        $this->assertTrue($gating->permite($solicitud, 'cierre'));
+        // "cierre" figura en el listado por clasificación, pero permite() exige además que la
+        // implementación haya terminado: no tiene sentido verificar criterios de un cambio Menor
+        // que todavía no se ha implementado.
+        $this->assertContains('cierre', $gating->secciones($solicitud));
+        $this->assertFalse($gating->permite($solicitud, 'cierre'));
         $this->assertFalse($gating->permite($solicitud, 'cuestionario'));
         $this->assertFalse($gating->permite($solicitud, 'consideraciones'));
         $this->assertFalse($gating->permite($solicitud, 'riesgos'));
+
+        $solicitud->forceFill(['estado' => \App\Enums\EstadoSolicitud::Implementado])->save();
+        $this->assertTrue($gating->permite($solicitud->fresh(), 'cierre'));
     }
 
     public function test_clasificacion_mayor_sin_cuestionario_solo_habilita_cuestionario(): void

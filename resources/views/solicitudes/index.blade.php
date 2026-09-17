@@ -46,7 +46,7 @@
                                 <td class="text-ink-500">{{ $solicitud->fecha?->format('d/m/Y') }}</td>
                                 <td class="text-right whitespace-nowrap">
                                     <a class="font-medium text-brand-700 hover:text-brand-800" href="{{ route('solicitudes.show', $solicitud) }}">Ver</a>
-                                    @if ($solicitud->estado->esEditable())
+                                    @if ($solicitud->estado->admiteGestionDePlanYCierre())
                                         <span class="text-ink-300">·</span>
                                         <a class="font-medium text-brand-700 hover:text-brand-800" href="{{ route('solicitudes.edit', $solicitud) }}">Editar</a>
                                     @endif

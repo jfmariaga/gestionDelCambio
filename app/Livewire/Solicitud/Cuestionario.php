@@ -22,7 +22,11 @@ class Cuestionario extends Component
 
     public function mount(SolicitudCambio $solicitud): void
     {
-        $this->authorize('completarSecciones', $solicitud);
+        // Poder ver la solicitud (p. ej. un responsable de tarea del plan) O poder completar
+        // secciones (p. ej. un dueño de proceso sin filas asignadas todavía) alcanza para
+        // montar la página; responder() exige el permiso real de escritura.
+        $user = auth()->user();
+        abort_unless($user->can('view', $solicitud) || $user->can('completarSecciones', $solicitud), 403);
         $this->solicitud = $solicitud;
         $this->respuestas = $solicitud->respuestas()
             ->pluck('valor', 'pregunta_clave_id')
@@ -97,6 +101,8 @@ class Cuestionario extends Component
 
     public function responder(int $preguntaId, string $valor): void
     {
+        $this->authorize('completarSecciones', $this->solicitud);
+
         $enum = ValorRespuesta::tryFrom($valor);
         abort_if($enum === null, 422, 'Valor de respuesta inválido.');
 
@@ -107,6 +113,8 @@ class Cuestionario extends Component
             return;
         }
 
+        $completoAntes = $this->solicitud->cuestionarioCompleto();
+
         $pregunta = PreguntaClave::findOrFail($preguntaId);
         app(RegistrarRespuesta::class)($this->solicitud, $pregunta, $enum);
 
@@ -115,6 +123,13 @@ class Cuestionario extends Component
         unset($this->avance, $this->advertenciasSinRiesgo, $this->respondidasPorProceso);
         $this->dispatch('secciones-actualizadas');
         $this->dispatch('toast', icon: 'success', title: 'Respuesta guardada.');
+
+        // FR-045…FR-049: al llegar al 100%, recargar para habilitar riesgos/plan/cierre sin que
+        // el usuario tenga que refrescar la página a mano (el gating de secciones se evalúa una
+        // sola vez al renderizar edit.blade.php).
+        if (! $completoAntes && $this->solicitud->fresh()->cuestionarioCompleto()) {
+            $this->redirectRoute('solicitudes.edit', $this->solicitud, navigate: true);
+        }
     }
 
     public function render()

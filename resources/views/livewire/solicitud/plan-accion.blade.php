@@ -1,10 +1,12 @@
 <div class="space-y-3">
     @php($editable = $solicitud->estado === \App\Enums\EstadoSolicitud::Solicitado)
     @php($esLider = auth()->id() === $solicitud->created_by || auth()->user()->hasRole('administrador'))
+    @php($puedeReorganizar = $editable && $esLider)
     @php($maxKb = config('gestioncambio.adjunto_max_kb'))
 
     @forelse ($this->acciones as $accion)
         @php($esResponsable = auth()->id() === $accion->responsable_id)
+        @php($puedeOperar = $esResponsable || $esLider)
         <div wire:key="acc-{{ $accion->id }}" class="rounded-lg border border-ink-200 p-4">
             <div class="mb-2 flex flex-wrap items-center gap-2">
                 <span class="flex h-6 w-6 flex-none items-center justify-center rounded-md bg-ink-100 text-xs font-bold text-ink-500">{{ $accion->numero }}</span>
@@ -23,24 +25,24 @@
             @endif
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="sm:col-span-2 lg:col-span-4"><label class="field-label">Descripción</label><input type="text" class="input input-sm" @disabled(!$editable) wire:model="edicion.{{ $accion->id }}.descripcion"></div>
-                <div><label class="field-label">Proceso</label><input type="text" class="input input-sm" @disabled(!$editable) wire:model="edicion.{{ $accion->id }}.proceso"></div>
+                <div class="sm:col-span-2 lg:col-span-4"><label class="field-label">Descripción</label><input type="text" class="input input-sm" @disabled(!$puedeReorganizar) wire:model="edicion.{{ $accion->id }}.descripcion"></div>
+                <div><label class="field-label">Proceso</label><input type="text" class="input input-sm" @disabled(!$puedeReorganizar) wire:model="edicion.{{ $accion->id }}.proceso"></div>
                 <div>
                     <label class="field-label">Responsable</label>
-                    <x-user-select :users="$this->usuarios" :model="'edicion.'.$accion->id.'.responsable_id'" :current="$accion->responsable_id" :disabled="! $editable" class="w-full" />
+                    <x-user-select :users="$this->usuarios" :model="'edicion.'.$accion->id.'.responsable_id'" :current="$accion->responsable_id" :disabled="! $puedeReorganizar" class="w-full" />
                 </div>
-                <div><label class="field-label">Fecha</label><input type="date" class="input input-sm" @disabled(!$editable) wire:model="edicion.{{ $accion->id }}.fecha"></div>
+                <div><label class="field-label">Fecha</label><input type="date" class="input input-sm" @disabled(!$puedeReorganizar) wire:model="edicion.{{ $accion->id }}.fecha"></div>
                 @if (in_array($accion->estado, [\App\Enums\EstadoAccionPlan::Pendiente, \App\Enums\EstadoAccionPlan::EnCurso], true))
                     <div>
                         <label class="field-label">Estado</label>
-                        <select class="select input-sm" wire:model="edicion.{{ $accion->id }}.estado">
+                        <select class="select input-sm" @disabled(!$puedeOperar) wire:model="edicion.{{ $accion->id }}.estado">
                             @foreach (['Pendiente', 'En curso'] as $e)
                                 <option value="{{ $e }}">{{ $e }}</option>
                             @endforeach
                         </select>
                     </div>
                 @endif
-                <div class="sm:col-span-2 lg:col-span-4"><label class="field-label">Evidencia</label><input type="text" class="input input-sm" wire:model="edicion.{{ $accion->id }}.evidencia"></div>
+                <div class="sm:col-span-2 lg:col-span-4"><label class="field-label">Evidencia</label><input type="text" class="input input-sm" @disabled(!$puedeOperar) wire:model="edicion.{{ $accion->id }}.evidencia"></div>
             </div>
 
             @if ($accion->comentario_validacion && $accion->estado === \App\Enums\EstadoAccionPlan::EnCurso)
@@ -61,7 +63,9 @@
                 @empty
                     <p class="text-xs text-ink-400">Sin adjuntos.</p>
                 @endforelse
-                @if ($accion->adjuntos->count() < \App\Livewire\Solicitud\PlanAccion::MAX_ADJUNTOS)
+                @if (! $puedeOperar)
+                    {{-- Sin acción: solo el responsable o el líder pueden adjuntar evidencia. --}}
+                @elseif ($accion->adjuntos->count() < \App\Livewire\Solicitud\PlanAccion::MAX_ADJUNTOS)
                     <div class="mt-2 flex items-center gap-2">
                         <input type="file" class="text-xs" wire:key="file-acc-{{ $accion->id }}-{{ $accion->adjuntos->count() }}" wire:model="nuevoAdjunto.{{ $accion->id }}">
                         <button type="button" class="btn btn-secondary btn-xs" wire:click="subirAdjunto({{ $accion->id }})" wire:loading.attr="disabled">Subir</button>
@@ -74,14 +78,14 @@
             </div>
 
             <div class="mt-3 flex flex-wrap justify-end gap-2">
-                @if ($editable)
+                @if ($editable && ! $soloAccionId)
                     <button type="button" class="btn btn-danger btn-sm"
                             x-on:click="window.confirmarEliminar('Se eliminará esta acción del plan.').then(ok => ok && $wire.eliminar({{ $accion->id }}))">Eliminar</button>
                 @endif
 
                 @if (in_array($accion->estado, [\App\Enums\EstadoAccionPlan::Pendiente, \App\Enums\EstadoAccionPlan::EnCurso], true))
-                    <button class="btn btn-primary btn-sm" wire:click="guardar({{ $accion->id }})">Guardar</button>
-                    @if ($esResponsable || $esLider)
+                    @if ($puedeOperar)
+                        <button class="btn btn-primary btn-sm" wire:click="guardar({{ $accion->id }})">Guardar</button>
                         <button class="btn btn-success btn-sm" wire:click="marcarCerrada({{ $accion->id }})">Marcar cerrada</button>
                     @endif
                 @elseif ($accion->estado === \App\Enums\EstadoAccionPlan::CerradaPendienteValidacion && $esLider)
@@ -97,7 +101,7 @@
         <p class="rounded-lg border border-dashed border-ink-300 bg-ink-50 p-6 text-center text-sm text-ink-400">Sin acciones registradas.</p>
     @endforelse
 
-    @if ($editable)
+    @if ($editable && ! $soloAccionId)
         <button class="btn btn-secondary btn-sm" wire:click="agregar">+ Agregar acción</button>
     @endif
 </div>

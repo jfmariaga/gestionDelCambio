@@ -6,6 +6,7 @@ use App\Domain\GestionCambio\RegistrarRespuesta;
 use App\Domain\GestionCambio\TransicionSolicitud;
 use App\Enums\EstadoSolicitud;
 use App\Enums\ValorRespuesta;
+use App\Livewire\Solicitud\AprobacionCierre;
 use App\Models\AccionPlan;
 use App\Models\AprobacionSolicitud;
 use App\Models\PreguntaClave;
@@ -13,6 +14,7 @@ use App\Models\RiesgoPredeterminado;
 use App\Models\SolicitudCambio;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class CierreYExportacionTest extends TestCase
@@ -91,6 +93,79 @@ class CierreYExportacionTest extends TestCase
         $transicion->registrarDecisionInicial($s2->fresh(), $ap2, 'devolver', 'faltan evidencias');
         $this->assertSame(EstadoSolicitud::Solicitado, $s2->fresh()->estado);
         $this->assertNull($s2->fresh()->snapshot_at);
+    }
+
+    public function test_comprobar_cierre_muestra_confirmacion_cuando_no_hay_bloqueos(): void
+    {
+        $this->actuarComo('administrador');
+        $solicitud = SolicitudCambio::factory()->create();
+
+        Livewire::test(AprobacionCierre::class, ['solicitud' => $solicitud])
+            ->call('comprobarCierre')
+            ->assertSet('bloqueos', [])
+            ->assertSet('comprobado', true)
+            ->assertSee('Sin bloqueos: la solicitud está lista para cerrarse.')
+            ->assertDispatched('toast');
+    }
+
+    public function test_comprobar_cierre_lista_los_bloqueos_cuando_los_hay(): void
+    {
+        $this->actuarComo('administrador');
+        $solicitud = SolicitudCambio::factory()->create();
+        AccionPlan::create([
+            'solicitud_cambio_id' => $solicitud->id,
+            'numero' => 1, 'descripcion' => 'Pendiente', 'estado' => 'En curso',
+        ]);
+
+        Livewire::test(AprobacionCierre::class, ['solicitud' => $solicitud])
+            ->call('comprobarCierre')
+            ->assertSet('comprobado', true)
+            ->assertDontSee('Sin bloqueos: la solicitud está lista para cerrarse.');
+
+        $this->assertNotEmpty(app(TransicionSolicitud::class)->bloqueosDeCierre($solicitud->fresh()));
+    }
+
+    public function test_el_resumen_muestra_el_historial_de_bitacora(): void
+    {
+        $lider = $this->actuarComo('solicitante');
+        $solicitud = SolicitudCambio::factory()->enEvaluacion()->create(['created_by' => $lider->id]);
+
+        \App\Models\BitacoraEvento::create([
+            'solicitud_cambio_id' => $solicitud->id,
+            'user_id' => $lider->id,
+            'evento' => 'devuelta',
+            'comentario' => 'Faltan evidencias',
+        ]);
+
+        $this->get(route('solicitudes.show', $solicitud))
+            ->assertOk()
+            ->assertSee('Creada')
+            ->assertSee('Devuelta en aprobación inicial')
+            ->assertSee('Faltan evidencias')
+            ->assertSee($lider->name);
+    }
+
+    public function test_el_resumen_muestra_evaluacion_cuestionario_plan_y_cierre(): void
+    {
+        $this->actuarComo('administrador');
+
+        $solicitud = SolicitudCambio::factory()->create();
+        $criterio = \App\Models\CriterioRubrica::factory()->create(['nombre' => 'Criterio de prueba']);
+        app(\App\Domain\GestionCambio\EvaluadorRubrica::class)->calificar($solicitud, $criterio->id, 2);
+
+        $pregunta = PreguntaClave::factory()->create(['texto' => 'Pregunta de prueba']);
+        app(RegistrarRespuesta::class)($solicitud, $pregunta, ValorRespuesta::Si);
+
+        $solicitud->accionesPlan()->create(['numero' => 1, 'descripcion' => 'Acción de prueba', 'estado' => 'Pendiente']);
+        $solicitud->update(['nota_cierre' => 'Nota de cierre de prueba']);
+
+        $this->get(route('solicitudes.show', $solicitud))
+            ->assertOk()
+            ->assertSee('Evaluación y clasificación del cambio')
+            ->assertSee('Criterio de prueba')
+            ->assertSee('Pregunta de prueba')
+            ->assertSee('Acción de prueba')
+            ->assertSee('Nota de cierre de prueba');
     }
 
     public function test_exportar_genera_pdf(): void

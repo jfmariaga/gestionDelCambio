@@ -59,6 +59,16 @@ enum EstadoSolicitud: string
         return in_array($this, [self::Solicitado, self::EnEvaluacion], true);
     }
 
+    /**
+     * Estados en los que la página de edición sigue siendo alcanzable: fuera de esEditable()
+     * (borrador/evaluación) el formulario y los riesgos quedan de solo lectura, pero el plan de
+     * acción y el seguimiento de cierre se siguen gestionando ahí hasta que la solicitud termina.
+     */
+    public function admiteGestionDePlanYCierre(): bool
+    {
+        return ! in_array($this, [self::Cerrado, self::Cancelado], true);
+    }
+
     /** La sincronización automática de secciones (cuestionario → riesgos) solo corre al inicio. */
     public function permiteSincronizacion(): bool
     {

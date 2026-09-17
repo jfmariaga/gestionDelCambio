@@ -12,6 +12,7 @@ use App\Models\Proceso;
 use App\Models\RespuestaPregunta;
 use App\Models\SolicitudCambio;
 use App\Models\User;
+use App\Notifications\AprobacionPendienteNotification;
 use Illuminate\Support\Collection;
 
 /**
@@ -107,10 +108,17 @@ final class AsignadorAprobador
         }
 
         foreach ($ids as $uid) {
-            AprobacionSolicitud::firstOrCreate(
+            $fila = AprobacionSolicitud::firstOrCreate(
                 ['solicitud_cambio_id' => $solicitud->id, 'user_id' => $uid, 'etapa' => $etapa],
                 ['decision' => AprobacionSolicitud::PENDIENTE],
             );
+
+            // Solo al crearla: evita re-notificar cada vez que se recalcula el set (p. ej. al
+            // guardar la solicitud). Cubre a CUALQUIER aprobador resuelto —área o dueño de
+            // proceso—, no solo a los que además están dados de alta como destinatario de área.
+            if ($fila->wasRecentlyCreated) {
+                $fila->usuario?->notify(new AprobacionPendienteNotification($solicitud, $etapa));
+            }
         }
 
         if ($etapa === AprobacionSolicitud::ETAPA_INICIAL) {

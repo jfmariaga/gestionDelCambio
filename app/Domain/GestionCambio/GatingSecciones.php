@@ -3,6 +3,7 @@
 namespace App\Domain\GestionCambio;
 
 use App\Enums\Clasificacion;
+use App\Enums\EstadoSolicitud;
 use App\Models\SolicitudCambio;
 
 /**
@@ -13,6 +14,10 @@ use App\Models\SolicitudCambio;
  *  - Menor: además "plan" y "cierre" (sin cuestionario ni riesgos).
  *  - Mayor / Crítico / Revisar: habilita "cuestionario"; una vez respondido al 100%,
  *    habilita también "riesgos", "plan" y "cierre".
+ *
+ * Además, "cierre" (seguimiento y cierre) solo se habilita una vez terminada la
+ * implementación (estado Implementado en adelante) — sin importar la clasificación: no
+ * tiene sentido verificar criterios de cierre de un cambio que aún no se ha implementado.
  */
 final class GatingSecciones
 {
@@ -38,7 +43,19 @@ final class GatingSecciones
 
     public function permite(SolicitudCambio $solicitud, string $seccion): bool
     {
+        if ($seccion === 'cierre' && ! $this->implementacionCompleta($solicitud)) {
+            return false;
+        }
+
         return in_array($seccion, $this->secciones($solicitud), true);
+    }
+
+    /** ¿Ya se terminó de implementar? (única condición temporal de "cierre", aparte de clasificación/cuestionario). */
+    public function implementacionCompleta(SolicitudCambio $solicitud): bool
+    {
+        return in_array($solicitud->estado, [
+            EstadoSolicitud::Implementado, EstadoSolicitud::EnVerificacion, EstadoSolicitud::Cerrado,
+        ], true);
     }
 
     /** ¿La clasificación ya está resuelta (evaluación completa)? */

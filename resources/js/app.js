@@ -70,6 +70,10 @@ document.addEventListener('submit', (e) => {
     if (!form || form.dataset.confirmed === '1') return;
 
     e.preventDefault();
+    // Si hay varios botones de envío con distinto name/value en el mismo form (p. ej.
+    // "Aprobar" / "Devolver"), hay que recordar cuál se presionó: si el reenvío tras
+    // confirmar no lo indica, el navegador manda el form SIN ese campo.
+    const submitter = e.submitter;
     const isDelete =
         (form.querySelector('input[name="_method"]')?.value || '').toUpperCase() === 'DELETE' ||
         form.dataset.confirmDanger === '1';
@@ -85,7 +89,7 @@ document.addEventListener('submit', (e) => {
     run.then((ok) => {
         if (!ok) return;
         form.dataset.confirmed = '1';
-        if (form.requestSubmit) form.requestSubmit();
+        if (form.requestSubmit) form.requestSubmit(submitter);
         else form.submit();
     });
 });

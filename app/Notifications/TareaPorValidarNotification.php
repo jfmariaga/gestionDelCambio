@@ -28,7 +28,7 @@ class TareaPorValidarNotification extends Notification implements ShouldQueue
             ->greeting("Hola {$notifiable->name},")
             ->line("El responsable marcó como cerrada la tarea «{$this->accion->descripcion}» de la solicitud {$solicitud->consecutivo}.")
             ->line('Revise la evidencia y valide o rechace la tarea.')
-            ->action('Revisar', route('solicitudes.show', $solicitud));
+            ->action('Revisar', route('solicitudes.tarea', [$solicitud, $this->accion]));
     }
 
     public function toArray(object $notifiable): array
@@ -39,7 +39,7 @@ class TareaPorValidarNotification extends Notification implements ShouldQueue
             'consecutivo' => $this->accion->solicitud->consecutivo,
             'accion_id' => $this->accion->id,
             'mensaje' => "La tarea «{$this->accion->descripcion}» está lista para su validación.",
-            'url' => route('solicitudes.show', $this->accion->solicitud_cambio_id),
+            'url' => route('solicitudes.tarea', [$this->accion->solicitud_cambio_id, $this->accion->id]),
         ];
     }
 }

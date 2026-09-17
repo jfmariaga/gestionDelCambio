@@ -14,6 +14,13 @@ class SolicitudCambioPolicy
 {
     public function before(User $user, string $ability): ?bool
     {
+        // decidir/decidirCierre son por-fila: incluso el administrador debe tener una
+        // aprobación pendiente propia para esa etapa, si no, el botón "Aprobar" seguiría
+        // visible después de haber decidido (o sin haber sido nunca aprobador asignado).
+        if (in_array($ability, ['decidir', 'decidirCierre'], true)) {
+            return null;
+        }
+
         return $user->hasRole('administrador') ? true : null;
     }
 
@@ -33,7 +40,7 @@ class SolicitudCambioPolicy
 
         // Aprobador: ve todo lo que ya salió de borrador (y sus propios borradores).
         if ($user->hasRole('aprobador')
-            && ($solicitud->estado !== EstadoSolicitud::Borrador || $solicitud->created_by === $user->id)) {
+            && ($solicitud->estado !== EstadoSolicitud::Solicitado || $solicitud->created_by === $user->id)) {
             return true;
         }
 
@@ -52,6 +59,19 @@ class SolicitudCambioPolicy
 
         // Aprobador de cualquiera de las dos compuertas: puede ver la solicitud que debe decidir.
         if ($solicitud->aprobaciones()->where('user_id', $user->id)->exists()) {
+            return true;
+        }
+
+        // Responsable o creador de una tarea del plan de acción, aunque no tenga otro rol
+        // (FR-043/FR-055): así el enlace de su notificación no lo deja en una página muerta.
+        if ($solicitud->accionesPlan()
+            ->where(fn ($q) => $q->where('responsable_id', $user->id)->orWhere('creador_id', $user->id))
+            ->exists()) {
+            return true;
+        }
+
+        // Responsable de un criterio de cierre, mismo criterio que las tareas del plan.
+        if ($solicitud->criteriosCierre()->where('responsable_id', $user->id)->exists()) {
             return true;
         }
 
