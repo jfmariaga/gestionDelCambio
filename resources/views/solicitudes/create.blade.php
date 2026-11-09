@@ -49,8 +49,12 @@
                 </div>
                 <div>
                     <label class="field-label">Área / Proceso <span class="font-normal text-ink-400">(opcional)</span></label>
-                    <input type="text" name="area_proceso" class="input" value="{{ old('area_proceso') }}"
-                           placeholder="Ej. Producción">
+                    <select name="area_proceso" class="select select2" data-placeholder="Ej. Producción">
+                        <option value=""></option>
+                        @foreach (\App\Models\Proceso::activos()->ordenados()->pluck('nombre') as $nombreProceso)
+                            <option value="{{ $nombreProceso }}" @selected(old('area_proceso') === $nombreProceso)>{{ $nombreProceso }}</option>
+                        @endforeach
+                    </select>
                     <p class="mt-1 text-[11px] text-ink-400">Si el cambio resulta Menor, el aprobador será el dueño de este proceso.</p>
                 </div>
             </div>

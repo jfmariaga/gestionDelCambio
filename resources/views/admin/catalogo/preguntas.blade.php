@@ -23,8 +23,8 @@
         <div class="grid gap-3 md:grid-cols-2">
             <div>
                 <label class="field-label">Proceso</label>
-                <select name="proceso_id" x-model="proceso" class="select" required>
-                    <option value="">Seleccione…</option>
+                <select name="proceso_id" x-model="proceso" class="select select2" data-placeholder="Seleccione…" required>
+                    <option value=""></option>
                     @foreach ($procesos as $p)<option value="{{ $p->id }}">{{ $p->nombre }}</option>@endforeach
                 </select>
             </div>
@@ -56,7 +56,7 @@
     {{-- Filter --}}
     <form method="GET" class="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <label class="text-ink-500">Filtrar por proceso:</label>
-        <select name="proceso" class="select input-sm w-56" onchange="this.form.submit()">
+        <select name="proceso" class="select select2 input-sm w-56" data-placeholder="Todos" onchange="this.form.submit()">
             <option value="">Todos</option>
             @foreach ($procesos as $p)<option value="{{ $p->id }}" @selected($procesoId === $p->id)>{{ $p->nombre }}</option>@endforeach
         </select>
@@ -71,7 +71,7 @@
                     <div class="grid gap-3 md:grid-cols-2">
                         <div>
                             <label class="field-label">Proceso</label>
-                            <select name="proceso_id" class="select input-sm">
+                            <select name="proceso_id" class="select select2 input-sm">
                                 @foreach ($procesos as $p)<option value="{{ $p->id }}" @selected($pregunta->proceso_id === $p->id)>{{ $p->nombre }}</option>@endforeach
                             </select>
                         </div>

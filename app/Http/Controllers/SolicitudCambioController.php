@@ -303,6 +303,8 @@ class SolicitudCambioController extends Controller
         $solicitud->load([
             'responsable', 'riesgosAsociados', 'evaluacion.calificaciones.criterio',
             'accionesPlan.adjuntos', 'accionesPlan.riesgoAsociado', 'criteriosCierre.adjuntos',
+            'respuestas.pregunta.proceso', 'respuestas.pregunta.riesgoPredeterminado',
+            'aprobaciones.usuario', 'adjuntos',
         ]);
 
         $pdf = Pdf::loadView('exports.solicitud-fosig02', compact('solicitud'));
@@ -328,7 +330,6 @@ class SolicitudCambioController extends Controller
             'tipo_cambio' => [...$obligatorio, Rule::enum(TipoCambio::class)],
             'fecha_requerida' => [...$obligatorio, 'date'],
             'costo_estimado' => ['nullable', 'numeric', 'min:0'],
-            'requiere_comite' => ['boolean'],
             'situacion_actual' => [...$obligatorio, 'string'],
             'que_cambiara' => [...$obligatorio, 'string'],
             'resultado_esperado' => [...$obligatorio, 'string'],

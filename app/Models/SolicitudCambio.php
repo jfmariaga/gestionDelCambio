@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Clasificacion;
 use App\Enums\EstadoSolicitud;
 use App\Enums\TipoCambio;
+use App\Models\Concerns\TieneAdjuntos;
 use Database\Factories\SolicitudCambioFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,8 @@ class SolicitudCambio extends Model
 {
     /** @use HasFactory<SolicitudCambioFactory> */
     use HasFactory;
+
+    use TieneAdjuntos;
 
     protected $table = 'solicitudes_cambio';
 
@@ -194,5 +197,11 @@ class SolicitudCambio extends Model
     public function permiteSincronizacion(): bool
     {
         return $this->estado->permiteSincronizacion() && ! $this->estaCongelada();
+    }
+
+    /** Las imágenes de los campos de descripción se agrupan bajo su propio id, no uno ajeno. */
+    public function solicitudCambioId(): int|string
+    {
+        return $this->id;
     }
 }

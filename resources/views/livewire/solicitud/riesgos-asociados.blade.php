@@ -25,7 +25,18 @@
 
             @if ($fila->riesgo_predeterminado_id === null)
                 <div class="mb-3 grid gap-3 sm:grid-cols-2">
-                    <div><label class="field-label">Proceso</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.proceso_nombre"></div>
+                    <div>
+                        <label class="field-label">Proceso</label>
+                        <select class="select select2 input-sm" data-placeholder="Seleccione…" wire:model="edicion.{{ $fila->id }}.proceso_nombre">
+                            <option value=""></option>
+                            @foreach (\App\Models\Proceso::activos()->ordenados()->pluck('nombre') as $nombreProceso)
+                                <option value="{{ $nombreProceso }}">{{ $nombreProceso }}</option>
+                            @endforeach
+                            @if ($fila->proceso_nombre && ! \App\Models\Proceso::activos()->where('nombre', $fila->proceso_nombre)->exists())
+                                <option value="{{ $fila->proceso_nombre }}">{{ $fila->proceso_nombre }}</option>
+                            @endif
+                        </select>
+                    </div>
                     <div><label class="field-label">Riesgo</label><input type="text" class="input input-sm" wire:model="edicion.{{ $fila->id }}.riesgo_texto"></div>
                 </div>
             @endif

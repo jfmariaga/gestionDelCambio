@@ -9,8 +9,8 @@
         @csrf
         <h2 class="mb-3 text-sm font-semibold text-ink-900">Nuevo riesgo predeterminado</h2>
         <div class="grid gap-3 sm:grid-cols-[14rem_1fr_auto]">
-            <select name="proceso_id" class="select" required>
-                <option value="">Proceso…</option>
+            <select name="proceso_id" class="select select2" data-placeholder="Proceso…" required>
+                <option value=""></option>
                 @foreach ($procesos as $p)<option value="{{ $p->id }}">{{ $p->nombre }}</option>@endforeach
             </select>
             <input name="texto" class="input" placeholder="Enunciado del riesgo" required>

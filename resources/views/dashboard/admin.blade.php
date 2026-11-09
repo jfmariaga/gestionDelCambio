@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <label class="field-label">Proceso</label>
-                    <select name="proceso" class="select">
+                    <select name="proceso" class="select select2" data-placeholder="Todos">
                         <option value="">Todos</option>
                         @foreach ($procesos as $p)
                             <option value="{{ $p }}" @selected(($filtros['proceso'] ?? null) === $p)>{{ $p }}</option>

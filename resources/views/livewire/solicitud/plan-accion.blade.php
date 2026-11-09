@@ -26,7 +26,18 @@
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="sm:col-span-2 lg:col-span-4"><label class="field-label">Descripción</label><input type="text" class="input input-sm" @disabled(!$puedeReorganizar) wire:model="edicion.{{ $accion->id }}.descripcion"></div>
-                <div><label class="field-label">Proceso</label><input type="text" class="input input-sm" @disabled(!$puedeReorganizar) wire:model="edicion.{{ $accion->id }}.proceso"></div>
+                <div>
+                    <label class="field-label">Proceso</label>
+                    <select class="select select2 input-sm" data-placeholder="Seleccione…" @disabled(!$puedeReorganizar) wire:model="edicion.{{ $accion->id }}.proceso">
+                        <option value=""></option>
+                        @foreach (\App\Models\Proceso::activos()->ordenados()->pluck('nombre') as $nombreProceso)
+                            <option value="{{ $nombreProceso }}">{{ $nombreProceso }}</option>
+                        @endforeach
+                        @if ($accion->proceso && ! \App\Models\Proceso::activos()->where('nombre', $accion->proceso)->exists())
+                            <option value="{{ $accion->proceso }}">{{ $accion->proceso }}</option>
+                        @endif
+                    </select>
+                </div>
                 <div>
                     <label class="field-label">Responsable</label>
                     <x-user-select :users="$this->usuarios" :model="'edicion.'.$accion->id.'.responsable_id'" :current="$accion->responsable_id" :disabled="! $puedeReorganizar" class="w-full" />

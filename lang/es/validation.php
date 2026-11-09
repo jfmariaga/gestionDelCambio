@@ -181,7 +181,6 @@ return [
         'area_proceso' => 'área / proceso',
         'tipo_cambio' => 'tipo de cambio',
         'costo_estimado' => 'costo estimado',
-        'requiere_comite' => '¿requiere comité?',
         'situacion_actual' => 'situación actual',
         'que_cambiara' => 'qué cambiará',
         'resultado_esperado' => 'resultado esperado',

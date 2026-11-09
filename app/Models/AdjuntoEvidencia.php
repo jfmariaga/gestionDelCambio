@@ -17,7 +17,7 @@ class AdjuntoEvidencia extends Model
     protected $table = 'adjuntos_evidencia';
 
     protected $fillable = [
-        'adjuntable_type', 'adjuntable_id',
+        'adjuntable_type', 'adjuntable_id', 'campo',
         'disco', 'ruta', 'nombre_original', 'mime', 'tamano', 'subido_por',
     ];
 

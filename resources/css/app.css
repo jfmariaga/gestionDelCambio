@@ -71,6 +71,33 @@
         @apply rounded-md py-1 text-xs;
     }
 
+    /* select2: alinear con el estilo de .select de la app */
+    .select2-container--default .select2-selection--single {
+        @apply h-[38px] rounded-lg border-ink-300 shadow-sm;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        @apply pl-3 text-sm leading-[36px] text-ink-900;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        @apply text-ink-400;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        @apply border-brand-500 ring-1 ring-brand-500;
+    }
+    .select2-dropdown {
+        @apply rounded-lg border-ink-300 text-sm;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        @apply bg-brand-600 text-white;
+    }
+    .select2-search--dropdown .select2-search__field {
+        @apply rounded-md border-ink-300 text-sm focus:border-brand-500 focus:ring-brand-500;
+    }
+
     /* Badges */
     .badge {
         @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset;

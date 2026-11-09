@@ -26,8 +26,8 @@
     </div>
     <div>
         <label class="field-label">Área / Proceso <span class="text-rose-500">*</span></label>
-        <select name="area_proceso" class="select" required>
-            <option value="">Seleccione…</option>
+        <select name="area_proceso" class="select select2" data-placeholder="Seleccione…" required>
+            <option value=""></option>
             @foreach (\App\Models\Proceso::activos()->ordenados()->pluck('nombre') as $nombreProceso)
                 <option value="{{ $nombreProceso }}" @selected(old('area_proceso', $s?->area_proceso) === $nombreProceso)>{{ $nombreProceso }}</option>
             @endforeach
@@ -62,12 +62,6 @@
         </div>
         <input type="hidden" name="costo_estimado" :value="raw">
     </div>
-    <label class="flex items-center gap-2.5 self-end pb-1">
-        <input type="hidden" name="requiere_comite" value="0">
-        <input type="checkbox" name="requiere_comite" value="1" @checked(old('requiere_comite', $s?->requiere_comite))
-               class="rounded border-ink-300 text-brand-600 focus:ring-brand-500">
-        <span class="text-sm text-ink-700">¿Requiere comité?</span>
-    </label>
     <div>
         <label class="field-label">Aprobador asignado <span class="font-normal text-ink-400">(automático)</span></label>
         <div class="input flex items-center bg-ink-50 text-ink-700">
@@ -87,13 +81,16 @@
     <div>
         <label class="field-label">Situación actual <span class="text-rose-500">*</span></label>
         <textarea name="situacion_actual" rows="4" class="textarea" required>{{ old('situacion_actual', $s?->situacion_actual) }}</textarea>
+        <livewire:solicitud.imagenes-campo :solicitud="$s" campo="situacion_actual" :key="'imgs-situacion_actual-'.$s->id" />
     </div>
     <div>
         <label class="field-label">Qué cambiará <span class="text-rose-500">*</span></label>
         <textarea name="que_cambiara" rows="4" class="textarea" required>{{ old('que_cambiara', $s?->que_cambiara) }}</textarea>
+        <livewire:solicitud.imagenes-campo :solicitud="$s" campo="que_cambiara" :key="'imgs-que_cambiara-'.$s->id" />
     </div>
     <div>
         <label class="field-label">Resultado esperado <span class="text-rose-500">*</span></label>
         <textarea name="resultado_esperado" rows="4" class="textarea" required>{{ old('resultado_esperado', $s?->resultado_esperado) }}</textarea>
+        <livewire:solicitud.imagenes-campo :solicitud="$s" campo="resultado_esperado" :key="'imgs-resultado_esperado-'.$s->id" />
     </div>
 </div>

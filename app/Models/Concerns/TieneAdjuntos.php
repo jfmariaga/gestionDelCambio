@@ -24,10 +24,9 @@ trait TieneAdjuntos
         return $this->morphMany(AdjuntoEvidencia::class, 'adjuntable')->latest();
     }
 
-    public function agregarAdjunto(UploadedFile $archivo, int $usuarioId, string $disco = 'local'): AdjuntoEvidencia
+    public function agregarAdjunto(UploadedFile $archivo, int $usuarioId, string $disco = 'local', ?string $campo = null): AdjuntoEvidencia
     {
-        $solicitudId = $this->solicitud_cambio_id ?? $this->solicitud?->id ?? 'sin-solicitud';
-        $ruta = $archivo->store("adjuntos/{$solicitudId}", $disco);
+        $ruta = $archivo->store("adjuntos/{$this->solicitudCambioId()}", $disco);
 
         return $this->adjuntos()->create([
             'disco' => $disco,
@@ -36,6 +35,13 @@ trait TieneAdjuntos
             'mime' => $archivo->getClientMimeType(),
             'tamano' => $archivo->getSize(),
             'subido_por' => $usuarioId,
+            'campo' => $campo,
         ]);
+    }
+
+    /** Id de la solicitud de cambio dueña, para agrupar los archivos en el disco. */
+    public function solicitudCambioId(): int|string
+    {
+        return $this->solicitud_cambio_id ?? $this->solicitud?->id ?? 'sin-solicitud';
     }
 }

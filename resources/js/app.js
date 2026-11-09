@@ -6,9 +6,36 @@
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import { Chart, registerables } from 'chart.js';
+import jQuery from 'jquery';
+
+// select2 exige jQuery en el objeto global antes de cargarse.
+window.$ = window.jQuery = jQuery;
+import 'select2';
+import 'select2/dist/css/select2.min.css';
 
 Chart.register(...registerables);
 window.Chart = Chart;
+
+/** Inicializa select2 en los <select class="select2"> de la página (y de contenido insertado luego). */
+function initSelect2(scope = document) {
+    jQuery(scope)
+        .find('select.select2')
+        .each(function () {
+            if (jQuery(this).data('select2')) return;
+            jQuery(this).select2({
+                theme: 'default',
+                width: '100%',
+                placeholder: jQuery(this).data('placeholder') || 'Seleccione…',
+                allowClear: !jQuery(this).prop('required'),
+            });
+        });
+}
+
+document.addEventListener('DOMContentLoaded', () => initSelect2());
+document.addEventListener('livewire:navigated', () => initSelect2());
+document.addEventListener('livewire:init', () => {
+    Livewire.hook('morph.updated', ({ el }) => initSelect2(el));
+});
 
 const BRAND = '#0f766e'; // brand-700
 const INK = '#64748b'; // ink-500

@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/solicitudes/{solicitud}/aprobador', [SolicitudCambioController::class, 'aprobador'])->name('solicitudes.aprobador');
         Route::get('/solicitudes/{solicitud}/exportar', [SolicitudCambioController::class, 'exportar'])->name('solicitudes.exportar');
         Route::get('/solicitudes/{solicitud}/adjuntos/{adjunto}', [AdjuntoController::class, 'download'])->name('solicitudes.adjuntos.download');
+        Route::get('/solicitudes/{solicitud}/adjuntos/{adjunto}/inline', [AdjuntoController::class, 'inline'])->name('solicitudes.adjuntos.inline');
     });
 
     /*
